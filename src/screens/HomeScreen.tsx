@@ -8,38 +8,89 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
-import { getAnimes } from "../services/api.service";
+import { getAnimes, searchAnime } from "../services/api.service";
 import { Anime } from "../types/types";
 import { useNavigation } from "@react-navigation/native";
+import SearchBar from "../components/SearchBar";
 
 export default function HomeScreen() {
   const [animes, setAnimes] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
 
   const navigation = useNavigation<any>();
 
-  useEffect(() => {
-    const fetchAnimes = async () => {
-      try {
-        const response = await getAnimes(1);
-        setAnimes(response.data);
-      } catch (error) {
-        console.error("Erreur API :", error);
-      } finally {
-        setLoading(false);
+  // Fetch data with pagination support
+  const fetchData = async (pageNum: number, query?: string) => {
+    try {
+      setIsFetchingMore(true);
+      let response;
+      
+      if (query && query.trim()) {
+       response = await searchAnime(query, pageNum);
+      } else {
+       response = await getAnimes(pageNum);
       }
-    };
 
-    fetchAnimes();
+      // Merge new data with existing data
+      setAnimes(prevData =>
+        pageNum === 1
+          ? response.data
+          : [...prevData, ...response.data]
+      );
+    } catch (error) {
+     console.error("Erreur API :", error);
+    } finally {
+      setIsFetchingMore(false);
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchData(1);
   }, []);
 
   if (loading) {
-    return (
+   return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
+
+  // Handle search from SearchBar
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+    setAnimes([]);
+    setIsSearching(true);
+    setLoading(true);
+    await fetchData(1, query);
+    setIsSearching(false);
+  };
+
+  // Handle clear search
+  const handleClear = async () => {
+    setSearchQuery("");
+    setPage(1);
+    setAnimes([]);
+    setIsSearching(false);
+    setLoading(true);
+    await fetchData(1);
+  };
+
+  // Load more when reaching end of list
+  const handleLoadMore = () => {
+    if (!isFetchingMore && !isSearching) {
+     const nextPage = page + 1;
+      setPage(nextPage);
+      fetchData(nextPage, searchQuery || undefined);
+    }
+  };
 
   const renderAnime = ({ item }: { item: Anime }) => (
     <TouchableOpacity
@@ -55,17 +106,37 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  return (
-    <FlatList
-      data={animes}
-      keyExtractor={(item) => item.mal_id.toString()}
-      renderItem={renderAnime}
-      contentContainerStyle={styles.list}
-    />
+ return (
+    <View style={styles.container}>
+      {/* Search Bar */}
+      <SearchBar
+        onSearch={handleSearch}
+        onClear={handleClear}
+      />
+
+      {/* Anime List */}
+      <FlatList
+        data={animes}
+        keyExtractor={(item) => item.mal_id.toString()}
+       renderItem={renderAnime}
+       contentContainerStyle={styles.list}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() =>
+          isFetchingMore ? (
+            <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+ container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
   list: {
     padding: 16,
   },
@@ -94,5 +165,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loader: {
+    paddingVertical: 20,
   },
 });
