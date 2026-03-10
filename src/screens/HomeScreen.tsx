@@ -4,17 +4,19 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/AppNavigator";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Home">;
+type HomeScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Home"
+>;
 
 export default function HomeScreen() {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Home Screen</Text>
-
+      <Text style={styles.title}>Home Screen</Text>
       <Button
-        title="Go to Detail"
+        title="Voir le détail"
         onPress={() => navigation.navigate("Detail", { id: 1 })}
       />
     </View>
@@ -26,10 +28,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 20,
   },
-  text: {
+  title: {
     fontSize: 22,
     fontWeight: "bold",
+    marginBottom: 20,
   },
 });
