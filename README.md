@@ -24,7 +24,7 @@ Amine
 
 ---
 
-# 🧩 Répartition des tâches
+# Répartition des tâches
 
 Franck — Partie A
 
